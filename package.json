@@ -1,6 +1,6 @@
 {
   "name": "log-bundler",
-  "version": "0.0.1",
+  "version": "0.1.1",
   "description": "Bundle multiple logs together and log it once as a json log",
   "main": "dist/LogBundler.js",
   "scripts": {
