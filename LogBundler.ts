@@ -1,3 +1,4 @@
+import { JsonValue } from 'type-fest';
 import { makeTimer, timeDiffToNowInMs } from './precisionCounter';
 export type LogBundlerConstructorOptions = {
   requestId?: string,
@@ -9,12 +10,14 @@ export type TLogLevel = 'info' | 'warn' | 'error' | 'verbose';
 export type TLogEntryTuple<TLogType> = [string, TLogType];
 export type TLogEntryDictionary<TLogType> = { [key: string]: TLogType };
 export type TLogLevelsLogEntryDictionary<TLogType = LoggerEntry> = { [level in TLogLevel]?: TLogEntryDictionary<TLogType> };
-export type TLogLevelFn = (message: string, data?: any) => ILogger;
+export type TLogLevelFn = (message: string, data?: any) => any;
 export interface ILogger {
   readonly error: TLogLevelFn;
   readonly warn: TLogLevelFn;
   readonly info: TLogLevelFn;
 }
+const isDev = (env: string) => ['development', 'dev'].includes(env);
+const isTest = (env: string) => ['test', 'testing'].includes(env);
 export default class LogBundler {
   private timer: [number, number];
   private cumulativeData: TLogLevelsLogEntryDictionary = {
@@ -26,15 +29,19 @@ export default class LogBundler {
   verbose: boolean = false;
   environment: string;
 
+
   constructor(options: LogBundlerConstructorOptions = {}) {
     const { requestId, verbose = false, environment, logger } = options;
-
-    if (!logger) this.logger = new ConsoleLogger();
-    else this.logger = logger;
 
     this.timer = makeTimer();
     this.verbose = verbose;
     this.environment = environment ?? process.env.NODE_ENV ?? 'development';
+
+    // logger will only be injectable if env is production, otherwise it will use a basic console logger
+    // if there's no injected logger it will also use native basic console logger
+    if (!logger) this.logger = new ConsoleLogger(isDev(this.environment));
+    else this.logger = isDev(this.environment) ? new ConsoleLogger(true) : logger;
+
     if (requestId) {
       this.addData('request-id', requestId, "info");
     }
@@ -88,17 +95,19 @@ export default class LogBundler {
     if (this.verbose) transformedLevel = `verbose-${level}`;
     const data = this.toJSON(transformedLevel);
 
-    if (['dev', 'development'].includes(this.environment)) {
+    if (isDev(this.environment)) {
       // if development, always log full log contents
-      const logContent = JSON.stringify(data, null, 2);
+      const logContent = LogBundler.stringify(data);
       this.logger[level](`${this.environment} full ${level}:`, logContent);
-    } else if (this.environment === 'test') {
-      // if test, omit logs
-    } else {
+    } else if (!isTest(this.environment)) {
       // if not development or test, most likely some sort of production environment, 
       // log details are based on 'verbose' property
-      this.logger[level](`Full request data (level ${transformedLevel})`, data);
+      this.logger[level](`${this.verbose} ${level} ${this.environment}`, data);
     }
+  }
+
+  static stringify(data: JsonValue): string {
+    return JSON.stringify(data, null, 2);
   }
 }
 
@@ -121,22 +130,33 @@ export class LoggerEntry {
 }
 
 export class ConsoleLogger implements ILogger {
+  private console = {
+    group: console.group ?? ((data: string) => console.log(`-- -- start ${data}`)),
+    groupEnd: console.groupEnd ?? ((data: string) => console.log(`-- -- end ${data}`)),
+    error: console.error ?? ((data: string) => console.log('-- error\n', data)),
+    warn: console.warn ?? ((data: string) => console.log('-- warn\n', data)),
+    info: console.info ?? ((data: string) => console.log('-- info\n', data))
+  };
+
+  constructor(private group: boolean) { }
+
   error(message: string, data?: any): ILogger {
-    console.group(message);
-    console.error(data);
-    console.groupEnd();
+    if (this.group) this.console.group(message);
+    this.console.error(data);
+    if (this.group) this.console.groupEnd();
     return this;
   }
   warn(message: string, data?: any): ILogger {
-    console.group(message);
-    console.warn(data);
-    console.groupEnd();
+    if (this.group) this.console.group(message);
+    this.console.warn(data);
+    if (this.group) this.console.groupEnd();
     return this;
   }
   info(message: string, data?: any): ILogger {
-    console.group(message);
-    console.info(data);
-    console.groupEnd();
+    console.log(message, data)
+    if (this.group) this.console.group(message);
+    this.console.info(data);
+    if (this.group) this.console.groupEnd();
     return this;
   }
 }
