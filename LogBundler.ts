@@ -26,7 +26,7 @@ export default class LogBundler {
   verbose: boolean = false;
   environment: string;
 
-  constructor(options: LogBundlerConstructorOptions) {
+  constructor(options: LogBundlerConstructorOptions = {}) {
     const { requestId, verbose = false, environment, logger } = options;
 
     if (!logger) this.logger = new ConsoleLogger();
