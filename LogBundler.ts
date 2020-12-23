@@ -102,7 +102,7 @@ export default class LogBundler {
     } else if (!isTest(this.environment)) {
       // if not development or test, most likely some sort of production environment, 
       // log details are based on 'verbose' property
-      this.logger[level](`${this.verbose} ${level} ${this.environment}`, data);
+      this.logger[level](`production ${this.verbose} ${level}`, data);
     }
   }
 
@@ -153,7 +153,6 @@ export class ConsoleLogger implements ILogger {
     return this;
   }
   info(message: string, data?: any): ILogger {
-    console.log(message, data)
     if (this.group) this.console.group(message);
     this.console.info(data);
     if (this.group) this.console.groupEnd();
