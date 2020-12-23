@@ -1,13 +1,20 @@
-
-import logger from 'json-log';
 import { makeTimer, timeDiffToNowInMs } from './precisionCounter';
 export type TSingleRequestLogger = {
-  requestId?: string
+  requestId?: string,
+  verbose?: boolean,
+  environment?: string,
+  logger?: ILogger
 };
 export type TLogLevel = 'info' | 'warn' | 'error' | 'verbose';
 export type TLogEntryTuple<TLogType> = [string, TLogType];
 export type TLogEntryDictionary<TLogType> = { [key: string]: TLogType };
 export type TLogLevelsLogEntryDictionary<TLogType = LoggerEntry> = { [level in TLogLevel]?: TLogEntryDictionary<TLogType> };
+export declare type LogLevelFn = (message: string, data?: any) => ILogger;
+export interface ILogger {
+  readonly error: LogLevelFn;
+  readonly warn: LogLevelFn;
+  readonly info: LogLevelFn;
+}
 export default class LogBundler {
   private timer: [number, number];
   private cumulativeData: TLogLevelsLogEntryDictionary = {
@@ -15,12 +22,26 @@ export default class LogBundler {
     warn: {},
     error: {}
   };
-  constructor(options: TSingleRequestLogger = {}) {
-    const { requestId } = options;
+  private logger: ILogger;
+  verbose: boolean = false;
+  environment: string = 'development';
+
+  constructor(options: TSingleRequestLogger) {
+    const { requestId, verbose = false, environment = 'development', logger } = options;
+
+    if (!logger) this.logger = new ConsoleLogger();
+    else this.logger = logger;
+
     this.timer = makeTimer();
+    this.verbose = verbose;
+    this.environment = environment;
     if (requestId) {
       this.addData('request-id', requestId, "info");
     }
+  }
+
+  get env(): string {
+    return process.env.NODE_ENV ?? this.environment;
   }
 
   addData(key: string, value: any, level: string = 'info') {
@@ -68,16 +89,19 @@ export default class LogBundler {
   }
   dump(level: TLogLevel = 'info') {
     let transformedLevel: string = level;
-    if (getEnv().VERBOSE) transformedLevel = `verbose-${level}`;
+    if (this.verbose) transformedLevel = `verbose-${level}`;
     const data = this.toJSON(transformedLevel);
 
-    if (getEnv().NODE_ENV === 'production') {
-      logger[level](`Full request data (level ${transformedLevel})`, data);
-    } else if (getEnv().NODE_ENV === 'test') {
-
-    } else {
+    if (['dev', 'development'].includes(this.env)) {
+      // if development, always log full log contents
       const logContent = JSON.stringify(data, null, 2);
-      console.log(`--- ${transformedLevel}`, logContent);
+      this.logger[level](`${this.env} full ${level}:`, logContent);
+    } else if (this.env === 'test') {
+      // if test, omit logs
+    } else {
+      // if not development or test, most likely some sort of production environment, 
+      // log details are based on 'verbose' property
+      this.logger[level](`Full request data (level ${transformedLevel})`, data);
     }
   }
 }
@@ -97,5 +121,26 @@ class LoggerEntry {
   }
   toString() {
     return this.content;
+  }
+}
+
+class ConsoleLogger implements ILogger {
+  error(message: string, data?: any): ILogger {
+    console.group(message);
+    console.error(data);
+    console.groupEnd();
+    return this;
+  }
+  warn(message: string, data?: any): ILogger {
+    console.group(message);
+    console.warn(data);
+    console.groupEnd();
+    return this;
+  }
+  info(message: string, data?: any): ILogger {
+    console.group(message);
+    console.info(data);
+    console.groupEnd();
+    return this;
   }
 }
