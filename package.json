@@ -4,7 +4,8 @@
   "description": "Bundle multiple logs together and log it once as a json log",
   "main": "dist/LogBundler.js",
   "scripts": {
-    "build": "tsc"
+    "build": "tsc",
+    "install": "npm run build"
   },
   "author": "pedro torchio <pedrotorchio@gmail.com>",
   "license": "ISC",
