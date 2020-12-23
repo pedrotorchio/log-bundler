@@ -11,7 +11,7 @@ export type {
 } from './LogBundler';
 
 export {
-  default as LogBundler,
+  default
 } from './LogBundler';
 
 export {

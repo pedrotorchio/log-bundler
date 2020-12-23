@@ -24,24 +24,20 @@ export default class LogBundler {
   };
   private logger: ILogger;
   verbose: boolean = false;
-  environment: string = 'development';
+  environment: string;
 
   constructor(options: LogBundlerConstructorOptions) {
-    const { requestId, verbose = false, environment = 'development', logger } = options;
+    const { requestId, verbose = false, environment, logger } = options;
 
     if (!logger) this.logger = new ConsoleLogger();
     else this.logger = logger;
 
     this.timer = makeTimer();
     this.verbose = verbose;
-    this.environment = environment;
+    this.environment = environment ?? process.env.NODE_ENV ?? 'development';
     if (requestId) {
       this.addData('request-id', requestId, "info");
     }
-  }
-
-  get env(): string {
-    return process.env.NODE_ENV ?? this.environment;
   }
 
   addData(key: string, value: any, level: string = 'info') {
@@ -92,11 +88,11 @@ export default class LogBundler {
     if (this.verbose) transformedLevel = `verbose-${level}`;
     const data = this.toJSON(transformedLevel);
 
-    if (['dev', 'development'].includes(this.env)) {
+    if (['dev', 'development'].includes(this.environment)) {
       // if development, always log full log contents
       const logContent = JSON.stringify(data, null, 2);
-      this.logger[level](`${this.env} full ${level}:`, logContent);
-    } else if (this.env === 'test') {
+      this.logger[level](`${this.environment} full ${level}:`, logContent);
+    } else if (this.environment === 'test') {
       // if test, omit logs
     } else {
       // if not development or test, most likely some sort of production environment, 
