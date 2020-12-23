@@ -1,0 +1,14 @@
+{
+  "name": "log-bundler",
+  "version": "0.0.1",
+  "description": "Bundle multiple logs together and log it once as a json log",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "pedro torchio <pedrotorchio@gmail.com>",
+  "license": "ISC",
+  "dependencies": {
+    "json-log": "^3.0.1"
+  }
+}
