@@ -1,5 +1,5 @@
 import { makeTimer, timeDiffToNowInMs } from './precisionCounter';
-export type TSingleRequestLogger = {
+export type LogBundlerConstructorOptions = {
   requestId?: string,
   verbose?: boolean,
   environment?: string,
@@ -9,11 +9,11 @@ export type TLogLevel = 'info' | 'warn' | 'error' | 'verbose';
 export type TLogEntryTuple<TLogType> = [string, TLogType];
 export type TLogEntryDictionary<TLogType> = { [key: string]: TLogType };
 export type TLogLevelsLogEntryDictionary<TLogType = LoggerEntry> = { [level in TLogLevel]?: TLogEntryDictionary<TLogType> };
-export declare type LogLevelFn = (message: string, data?: any) => ILogger;
+export type TLogLevelFn = (message: string, data?: any) => ILogger;
 export interface ILogger {
-  readonly error: LogLevelFn;
-  readonly warn: LogLevelFn;
-  readonly info: LogLevelFn;
+  readonly error: TLogLevelFn;
+  readonly warn: TLogLevelFn;
+  readonly info: TLogLevelFn;
 }
 export default class LogBundler {
   private timer: [number, number];
@@ -26,7 +26,7 @@ export default class LogBundler {
   verbose: boolean = false;
   environment: string = 'development';
 
-  constructor(options: TSingleRequestLogger) {
+  constructor(options: LogBundlerConstructorOptions) {
     const { requestId, verbose = false, environment = 'development', logger } = options;
 
     if (!logger) this.logger = new ConsoleLogger();
@@ -106,7 +106,7 @@ export default class LogBundler {
   }
 }
 
-class LoggerEntry {
+export class LoggerEntry {
   public isMultiple: boolean = false;
   constructor(public content: any) { }
   add(value: any) {
@@ -124,7 +124,7 @@ class LoggerEntry {
   }
 }
 
-class ConsoleLogger implements ILogger {
+export class ConsoleLogger implements ILogger {
   error(message: string, data?: any): ILogger {
     console.group(message);
     console.error(data);

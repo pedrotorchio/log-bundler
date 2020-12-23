@@ -2,7 +2,8 @@
   "name": "log-bundler",
   "version": "0.1.1",
   "description": "Bundle multiple logs together and log it once as a json log",
-  "main": "dist/LogBundler.js",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc",
     "install": "npm run build"
