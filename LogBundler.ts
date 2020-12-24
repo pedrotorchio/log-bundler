@@ -102,7 +102,7 @@ export default class LogBundler {
     } else if (!isTest(this.environment)) {
       // if not development or test, most likely some sort of production environment, 
       // log details are based on 'verbose' property
-      this.logger[level](`production ${this.verbose} ${level}`, data);
+      this.logger[level](`production ${this.verbose ? 'verbose' : 'compact'} ${level}`, data);
     }
   }
 
