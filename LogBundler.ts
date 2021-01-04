@@ -1,5 +1,6 @@
 import { JsonValue } from 'type-fest';
-import { makeTimer, timeDiffToNowInMs } from './precisionCounter';
+import now from 'performance-now';
+
 export type LogBundlerConstructorOptions = {
   requestId?: string,
   verbose?: boolean,
@@ -19,7 +20,7 @@ export interface ILogger {
 const isDev = (env: string) => ['development', 'dev'].includes(env);
 const isTest = (env: string) => ['test', 'testing'].includes(env);
 export default class LogBundler {
-  private timer: [number, number];
+  private timer: number;
   private cumulativeData: TLogLevelsLogEntryDictionary = {
     info: {},
     warn: {},
@@ -33,7 +34,7 @@ export default class LogBundler {
   constructor(options: LogBundlerConstructorOptions = {}) {
     const { requestId, verbose = false, environment, logger } = options;
 
-    this.timer = makeTimer();
+    this.timer = now();
     this.verbose = verbose;
     this.environment = environment ?? process.env.NODE_ENV ?? 'development';
 
@@ -47,14 +48,19 @@ export default class LogBundler {
     }
   }
 
-  addData(key: string, value: any, level: string = 'info') {
-    const existing = this.cumulativeData[level][key];
+  addData(key: string, value: any, level: TLogLevel = 'info') {
+    const existing = this.cumulativeData[level]![key];
     if (!!existing) {
       existing.add(value);
     } else {
-      this.cumulativeData[level][key] = new LoggerEntry(value);
+      this.cumulativeData[level]![key] = new LoggerEntry(value);
     }
     return this;
+  }
+  addTimestamp(key: string) {
+    const timestamp = now();
+    const diff = timestamp - this.timer;
+    this.addData(`Time: ${key}`, `${diff} elapsed, ${timestamp}ms`, 'info');
   }
   toJSON(level: string): TLogEntryDictionary<any> {
 
@@ -68,7 +74,7 @@ export default class LogBundler {
       const content = entries.reduce(objectify, {});
       return content;
     };
-    const timerNow = timeDiffToNowInMs(this.timer);
+    const timerNow = now() - this.timer;
 
     let selectedLevels: string[] = [];
     switch (level) {
