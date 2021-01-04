@@ -21,6 +21,7 @@ const isDev = (env: string) => ['development', 'dev'].includes(env);
 const isTest = (env: string) => ['test', 'testing'].includes(env);
 export default class LogBundler {
   private timer: number;
+  private lastTimestamp: number;
   private cumulativeData: TLogLevelsLogEntryDictionary = {
     info: {},
     warn: {},
@@ -35,6 +36,7 @@ export default class LogBundler {
     const { requestId, verbose = false, environment, logger } = options;
 
     this.timer = now();
+    this.lastTimestamp = this.timer;
     this.verbose = verbose;
     this.environment = environment ?? process.env.NODE_ENV ?? 'development';
 
@@ -58,9 +60,12 @@ export default class LogBundler {
     return this;
   }
   addTimestamp(key: string) {
-    const timestamp = now();
-    const diff = timestamp - this.timer;
-    this.addData(`Time: ${key}`, `${diff} elapsed, ${timestamp}ms`, 'info');
+    const nowTime = now();
+    const diff = (baseTime: number) => (nowTime - baseTime).toFixed(2);
+    const saveNowTime = () => this.lastTimestamp = nowTime;
+
+    this.addData(`Timestamp: ${key}`, `${diff(this.lastTimestamp)}ms since last timestamp, ${diff(this.timer)}ms since start`, 'info');
+    saveNowTime();
   }
   toJSON(level: string): TLogEntryDictionary<any> {
 
