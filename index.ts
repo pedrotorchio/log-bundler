@@ -13,8 +13,3 @@ export type {
 export {
   default
 } from './LogBundler';
-
-export {
-  makeTimer,
-  timeDiffToNowInMs
-} from './precisionCounter';
