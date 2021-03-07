@@ -103,7 +103,7 @@ export default class LogBundler {
         ...lvlData
       };
     }, {
-      "status": new LoggerEntry(level),
+      "log-level": new LoggerEntry(level),
       "time-elapsed-ms": new LoggerEntry(timerNow)
     });
 
