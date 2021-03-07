@@ -1,6 +1,11 @@
 import { JsonValue } from 'type-fest';
 import now from 'performance-now';
 
+type GlobalObject = { console: GlobalConsoleObject };
+declare var window: GlobalObject;
+declare var global: GlobalObject;
+declare var globalThis: GlobalObject;
+
 export type LogBundlerConstructorOptions = {
   requestId?: string,
   verbose?: boolean,
@@ -42,8 +47,12 @@ export default class LogBundler {
 
     // logger will only be injectable if env is production, otherwise it will use a basic console logger
     // if there's no injected logger it will also use native basic console logger
-    if (!logger) this.logger = new ConsoleLogger(isDev(this.environment));
-    else this.logger = isDev(this.environment) ? new ConsoleLogger(true) : logger;
+    if (!logger || isDev(this.environment)) {
+      const defaultGlobalConsole: GlobalConsoleObject = (window ?? global ?? globalThis).console;
+      this.logger = new ConsoleLogger(isDev(this.environment), defaultGlobalConsole);
+    } else {
+      this.logger = logger;
+    }
 
     if (requestId) {
       this.addData('request-id', requestId, "info");
@@ -139,17 +148,28 @@ export class LoggerEntry {
     return this.content;
   }
 }
-
+export interface GlobalConsoleObject {
+  group?: (d: string) => void;
+  groupEnd?: () => void;
+  error?: (d: string) => void;
+  warn?: (d: string) => void;
+  info?: (d: string) => void;
+  log: (d: string) => void;
+}
 export class ConsoleLogger implements ILogger {
-  private console = {
-    group: console.group ?? ((data: string) => console.log(`-- -- start ${data}`)),
-    groupEnd: console.groupEnd ?? ((data: string) => console.log(`-- -- end ${data}`)),
-    error: console.error ?? ((data: string) => console.log('-- error\n', data)),
-    warn: console.warn ?? ((data: string) => console.log('-- warn\n', data)),
-    info: console.info ?? ((data: string) => console.log('-- info\n', data))
-  };
+  private console: Required<GlobalConsoleObject>;
 
-  constructor(private group: boolean) { }
+  constructor(private group: boolean, globalConsoleObject: GlobalConsoleObject) {
+    const log = globalConsoleObject.log;
+    this.console = {
+      group: globalConsoleObject.group ?? ((data: string) => log(`-- -- start ${data}`)),
+      groupEnd: globalConsoleObject.groupEnd ?? (() => log(`-- -- end`)),
+      error: globalConsoleObject.error ?? ((data: string) => log(`-- error\n${data}`)),
+      warn: globalConsoleObject.warn ?? ((data: string) => log(`-- warn\n${data}`)),
+      info: globalConsoleObject.info ?? ((data: string) => log(`-- info\n${data}`)),
+      log
+    };
+  }
 
   error(message: string, data?: any): ILogger {
     if (this.group) this.console.group(message);
