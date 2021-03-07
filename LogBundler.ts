@@ -1,11 +1,6 @@
 import { JsonValue } from 'type-fest';
 import now from 'performance-now';
 
-type GlobalObject = { console: GlobalConsoleObject };
-declare var window: GlobalObject;
-declare var global: GlobalObject;
-declare var globalThis: GlobalObject;
-
 export type LogBundlerConstructorOptions = {
   requestId?: string,
   verbose?: boolean,
@@ -48,8 +43,7 @@ export default class LogBundler {
     // logger will only be injectable if env is production, otherwise it will use a basic console logger
     // if there's no injected logger it will also use native basic console logger
     if (!logger || isDev(this.environment)) {
-      const defaultGlobalConsole: GlobalConsoleObject = (window ?? global ?? globalThis).console;
-      this.logger = new ConsoleLogger(isDev(this.environment), defaultGlobalConsole);
+      this.logger = new ConsoleLogger(isDev(this.environment), getGlobalConsole());
     } else {
       this.logger = logger;
     }
@@ -130,7 +124,9 @@ export default class LogBundler {
     return JSON.stringify(data, null, 2);
   }
 }
-
+function getGlobalConsole(): GlobalConsoleObject {
+  return console;
+}
 export class LoggerEntry {
   public isMultiple: boolean = false;
   constructor(public content: any) { }
